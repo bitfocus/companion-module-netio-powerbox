@@ -1,0 +1,26 @@
+{
+	"name": "netio-powerbox",
+	"version": "0.0.1",
+	"api_version": "1.0.0",
+	"keywords": [
+		"Power",
+		"Electric"
+	],
+	"manufacturer": "NETIO",
+	"product": "PowerBOX",
+	"shortname": "PowerBOX",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-netio-powerbox.git"
+	},
+	"author": "Jeffrey Davidsz <jeffrey.davidsz@vicreo.eu>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-netio-powerbox/issues"
+	},
+	"homepage": "https://github.com/bitfocus/companion-module-netio-powerboxp#readme"
+}
