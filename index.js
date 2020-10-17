@@ -32,7 +32,26 @@ instance.prototype.init = function() {
 	log = self.log;
 
 	self.initFeedbacks();
+	self.getStatus();
 
+}
+
+instance.prototype.getStatus = function() {
+	var self = this;
+	if(self.config.ip !== undefined) {
+	const url = `http://${self.config.ip}/netio.json`;
+		self.system.emit('rest_get', url, function (err, result) {
+			if (err !== null) {
+				self.log('error', 'HTTP GET Request failed (' + result.error.code + ')');
+				self.status(self.STATUS_ERROR, result.error.code);
+			}
+			else {
+				self.outputs = result.data.Outputs;
+				self.status(self.STATUS_OK);
+				self.checkFeedbacks('outputs');
+			}
+		});
+	}
 }
 
 // Return config fields for web config
@@ -102,32 +121,21 @@ instance.prototype.action = function(action) {
 			self.status(self.STATUS_ERROR, e.message);
 			return
 		}
-		self.system.emit('rest', url, body, function (err, result) {
-			if (err !== null) {
-				self.log('error', 'HTTP POST Request failed (' + result.error.code + ')');
-				self.status(self.STATUS_ERROR, result.error.code);
-			}
-			else {
-				console.log('after post', result.data.Outputs);
-				self.outputs = result.data.Outputs;
-				self.checkFeedbacks('outputs');
-				self.status(self.STATUS_OK);
-			}
-		});
-	}
-	else if (action.action == 'get') {
-		const url = `http://${self.config.ip}/netio.json`;
-		self.system.emit('rest_get', url, function (err, result) {
-			if (err !== null) {
-				self.log('error', 'HTTP GET Request failed (' + result.error.code + ')');
-				self.status(self.STATUS_ERROR, result.error.code);
-			}
-			else {
-				console.log('result', result.data);
-				self.status(self.STATUS_OK);
-				self.checkFeedbacks('outputs');
-			}
-		});
+		// Is there an output on selected number?
+		if(self.outputs.find(element => element.ID.toString() == action.options.output)) {
+			self.system.emit('rest', url, body, (err, result) => {
+				if (err !== null) {
+					self.log('error', 'HTTP POST Request failed (' + result.error.code + ')');
+					self.status(self.STATUS_ERROR, result.error.code);
+				}
+				else {
+					self.outputs = result.data.Outputs;
+					self.checkFeedbacks('outputs');
+				}
+			});
+		} else {
+			self.log('error', 'That output does not exist on this NETIO');
+		}
 	}
 }
 
@@ -169,22 +177,10 @@ instance.prototype.feedback = function(feedback, bank) {
 	var self = this;
 
 	if (feedback.type === 'outputs') {
-		let loopPromise = new Promise((resolve, reject) => {
-			var self = this;
-			self.outputs.forEach(element => {
-				if(element.ID.toString() == feedback.options.output) {
-					resolve(element.State);
-				}
-			})
-		})
-
-		loopPromise.then((result) => {
-			if (result) {
-				if (result.toString() == '1') {
-					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
-				}
-			}
-		});
+		let output = self.outputs.find(element => element.ID.toString() == feedback.options.output);
+		if (output && output.State.toString() == '1') {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
 	}
 }
 
