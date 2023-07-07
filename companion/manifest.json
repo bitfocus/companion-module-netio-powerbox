@@ -1,0 +1,31 @@
+{
+	"id": "netio-powerbox",
+	"name": "netio-powerbox",
+	"shortname": "PowerBOX",
+	"description": "netio-powerbox",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/bitfocus/companion-module-netio-powerbox.git",
+	"bugs": "https://github.com/bitfocus/companion-module-netio-powerbox/issues",
+	"maintainers": [
+		{
+			"name": "Jeffrey Davidsz",
+			"email": "jeffrey.davidsz@vicreo.eu"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node18",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "..\\index.js"
+	},
+	"manufacturer": "NETIO",
+	"products": [
+		"PowerBOX"
+	],
+	"keywords": [
+		"Power",
+		"Electric"
+	]
+}

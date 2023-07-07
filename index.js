@@ -1,188 +1,158 @@
-var instance_skel = require('../../instance_skel');
-var debug;
-var log;
+const { InstanceBase, Regex, runEntrypoint,combineRgb , InstanceStatus} = require('@companion-module/base');
+const { default: axios } = require('axios');
 
-function instance(system, id, config) {
-	var self = this;
-
-	// super-constructor
-	instance_skel.apply(this, arguments);
-
-	self.actions(); // export actions
-
-	return self;
-}
-
-instance.prototype.outputs = [];
-
-instance.prototype.updateConfig = function(config) {
-	var self = this;
-
-	self.config = config;
-
-	self.actions();
-}
-
-instance.prototype.init = function() {
-	var self = this;
-
-	self.status(self.UNKNOWN);
-
-	debug = self.debug;
-	log = self.log;
-
-	self.initFeedbacks();
-	self.getStatus();
-
-}
-
-instance.prototype.getStatus = function() {
-	var self = this;
-	if(self.config.ip !== undefined) {
-	const url = `http://${self.config.ip}/netio.json`;
-		self.system.emit('rest_get', url, function (err, result) {
-			if (err !== null) {
-				self.log('error', 'HTTP GET Request failed (' + result.error.code + ')');
-				self.status(self.STATUS_ERROR, result.error.code);
-			}
-			else {
-				self.outputs = result.data.Outputs;
-				self.status(self.STATUS_OK);
-				self.checkFeedbacks('outputs');
-			}
-		});
+class BoxInstance extends InstanceBase {
+	constructor(internal) {
+		super(internal)
 	}
-}
+    outputs = [];
+	async init(config) {
+		this.config = config   
+		this.updateStatus('Connecting')
 
-// Return config fields for web config
-instance.prototype.config_fields = function () {
-	var self = this;
-	return [
-		{
-			type: 'text',
-			id: 'info',
-			width: 12,
-			label: 'Information',
-			value: 'This module can be used for controlling the NETIO PowerBOX'
-		},
-		{
-			type: 'textinput',
-			id: 'ip',
-			label: 'ip address',
-			regex: self.REGEX_IP,
-			width: 12
-		}
-	]
-}
+		this.updateActions() // export actions
+        this.updateFeedbacks()
+        this.getStatus();
+        this.updatePresets();
+        this.updateStatus(instanceStatus.OK, 'Ready');
 
-// When module gets deleted
-instance.prototype.destroy = function() {
-	var self = this;
-	debug("destroy");
-}
-
-instance.prototype.actions = function(system) {
-	var self = this;
-	var urlLabel = 'URL';
-
-	self.setActions({
-		'setOutput': {
-			label: 'Set output on/off',
-			options: [
-				{
-					type: 'textinput',
-					label: 'output',
-					id: 'output',
-					default: '1',
-					regex: self.REGEX_NUMBER
-				},
-				{
-					type: 'dropdown',
-					label: 'select',
-					id: 'para',
-					choices: [ { id: '1', label: 'On'}, { id: '0', label: 'Off'} ],
-					default: '1'
-				}
-			]
-		},
-	});
-}
-
-instance.prototype.action = function(action) {
-	var self = this;
-
-	if (action.action == 'setOutput') {
-		let body;
-		const url = `http://${self.config.ip}/netio.json`;
-		try {
-			body = JSON.parse(`{ "Outputs":[ { "ID":${action.options.output}, "Action":${action.options.para} } ] }`);
-		} catch(e){
-			self.log('error', 'HTTP POST Request aborted: Malformed JSON Body (' + e.message+ ')');
-			self.status(self.STATUS_ERROR, e.message);
-			return
-		}
-		// Is there an output on selected number?
-		if(self.outputs.find(element => element.ID.toString() == action.options.output)) {
-			self.system.emit('rest', url, body, (err, result) => {
-				if (err !== null) {
-					self.log('error', 'HTTP POST Request failed (' + result.error.code + ')');
-					self.status(self.STATUS_ERROR, result.error.code);
-				}
-				else {
-					self.outputs = result.data.Outputs;
-					self.checkFeedbacks('outputs');
-				}
-			});
-		} else {
-			self.log('error', 'That output does not exist on this NETIO');
-		}
 	}
-}
+	// When module gets deleted
+	async destroy() {
+		this.log('debug', 'destroy')
+	}
 
-instance.prototype.initFeedbacks = function() {
-	var self = this;
-	
-	// feedbacks
-	var feedbacks = {};
+	async configUpdated(config) {
+		this.config = config
+	}
 
-	feedbacks['outputs'] = {
-		label: 'Output On',
-		description: 'If the selected output is on, change the color of the button',
-		options: [
+	// Return config fields for web config
+	getConfigFields() {
+		return [
 			{
 				type: 'textinput',
-				label: 'Output',
-				id: 'output',
-				default: '1',
-				regex: self.REGEX_NUMBER
-			},
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255,255,255)
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(255,0,0)
-			},
+				id: 'ip',
+				label: 'Target IP',
+				width: 8,
+				regex: Regex.IP,
+			}
 		]
-	};
-	self.setFeedbackDefinitions(feedbacks);
-}
-
-instance.prototype.feedback = function(feedback, bank) {
-	var self = this;
-
-	if (feedback.type === 'outputs') {
-		let output = self.outputs.find(element => element.ID.toString() == feedback.options.output);
-		if (output && output.State.toString() == '1') {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
-		}
 	}
+
+	updateActions() {
+		
+		this.setActionDefinitions({
+			setOutput: {
+				name: 'Set output on/off',
+				options: [
+					{
+						type: 'number',
+						label: 'output',
+						id: 'output',
+						default: '1',
+						useVariables: true,
+					},{
+                        type: 'dropdown',
+                        label: 'select',
+                        id: 'para',
+                        choices: [ { id: '1', label: 'On'}, { id: '0', label: 'Off'} ],
+                        default: '1'
+                    }
+				],
+				callback: async (event) => {
+					const id = await this.parseVariablesInString(event.options.output)
+
+					this.setOutput(id, event.options.para)
+				},
+			},
+			
+		})
+	}
+    updateFeedbacks() {
+        this.setFeedbackDefinitions({
+            outputs: {
+                type: 'boolean',
+                name: 'Outputs',
+                description: 'Get the status of the outputs',
+                options: [
+                    {
+                        type:'number',
+                        label: 'Output',
+                        id: 'output',
+                        default: '1',
+
+                    }
+                ],
+                defaultStyle: {
+                    bgcolor: combineRgb(255,255,0),
+                },
+                callback: (feedback,) => {  
+                    if (this.outputs.length > 0) {
+                        let output = this.outputs.find(element => element.ID.toString() == feedback.options.output)
+                        if(output){
+                        return output.State == 1
+                        } else {
+                            return false
+                        }
+                    }
+                    return false
+                }}});
+
+    }
+    async updatePresets() {
+        let presets = [];
+        let url = `http://${this.config.ip}/netio.json`;
+        let response = await axios.get(url).catch(error => {
+            this.log('error', error.message)
+        } );
+        this.outputs = response.data.Outputs;
+        this.outputs.forEach(element => {
+            presets.push({
+                type: 'button',
+                category: 'Outputs',
+                name: 'Output ' + element.ID,
+                style:{
+                    text:"Output "+element.ID+" ",
+                    color:combineRgb(255,255,255),
+                    size:'auto',
+                    bgcolor:combineRgb(0,0,0),
+                },
+                steps:[{down:[{actionId:'setOutput', options:{output:element.ID, para:1}}]},{down:[{actionId:'setOutput', options:{output:element.ID, para:0}}]}],
+                feedbacks: [{feedbackId:'outputs', options:{output:element.ID},style:{
+                    bgcolor: combineRgb(255,255,0),
+                    color: combineRgb(0,0,0),
+                }}]
+
+        })});
+        this.setPresetDefinitions(presets);
+    }
+    async getStatus() {
+        let url = `http://${this.config.ip}/netio.json`;
+        let response = await axios.get(url).catch(error => {
+            this.log('error', error.message);
+            this.updateStatus(InstanceStatus.ConnectionFailure,error.message)} );
+        this.outputs = response.data.Outputs;
+        this.checkFeedbacks('outputs'); 
+    }   
+    async setOutput(output, para) {
+        let url = `http://${this.config.ip}/netio.json`;
+        try{
+        let body = JSON.parse(`{ "Outputs":[ { "ID":${output}, "Action":${para} } ] }`);
+        } catch (error) {
+            this.log('error', error.message);
+            this.updateStatus(InstanceStatus.UnknownError,error.message);
+        }
+        if(this.outputs.find(element => element.ID.toString() == output)){
+            
+        let response = await axios.post(url, body).catch(error => {
+            this.log('error', error.message)} );
+            
+        } else {
+			this.log('error', 'That output does not exist on this NETIO');
+		}
+        this.getStatus();
+    }
+    call
 }
 
-instance_skel.extendedBy(instance);
-exports = module.exports = instance;
+runEntrypoint(BoxInstance, [])
