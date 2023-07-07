@@ -1,4 +1,4 @@
-const { InstanceBase, Regex, runEntrypoint,combineRgb } = require('@companion-module/base');
+const { InstanceBase, Regex, runEntrypoint,combineRgb , InstanceStatus} = require('@companion-module/base');
 const { default: axios } = require('axios');
 
 class BoxInstance extends InstanceBase {
@@ -14,7 +14,7 @@ class BoxInstance extends InstanceBase {
         this.updateFeedbacks()
         this.getStatus();
         this.updatePresets();
-        this.updateStatus("ok");
+        this.updateStatus(instanceStatus.OK, 'Ready');
 
 	}
 	// When module gets deleted
@@ -129,13 +129,19 @@ class BoxInstance extends InstanceBase {
     async getStatus() {
         let url = `http://${this.config.ip}/netio.json`;
         let response = await axios.get(url).catch(error => {
-            this.log('error', error.message)} );
+            this.log('error', error.message);
+            this.updateStatus(InstanceStatus.ConnectionFailure,error.message)} );
         this.outputs = response.data.Outputs;
         this.checkFeedbacks('outputs'); 
     }   
     async setOutput(output, para) {
         let url = `http://${this.config.ip}/netio.json`;
+        try{
         let body = JSON.parse(`{ "Outputs":[ { "ID":${output}, "Action":${para} } ] }`);
+        } catch (error) {
+            this.log('error', error.message);
+            this.updateStatus(InstanceStatus.UnknownError,error.message);
+        }
         if(this.outputs.find(element => element.ID.toString() == output)){
             
         let response = await axios.post(url, body).catch(error => {
