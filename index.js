@@ -14,7 +14,7 @@ class BoxInstance extends InstanceBase {
         this.updateFeedbacks()
         this.getStatus();
         this.updatePresets();
-        this.updateStatus(InstanceStatus.OK, 'Ready');
+        this.updateStatus(InstanceStatus.Ok);
 
 	}
 	// When module gets deleted
