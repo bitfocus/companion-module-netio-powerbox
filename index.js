@@ -6,7 +6,7 @@ class BoxInstance extends InstanceBase {
 		super(internal)
 	}
 	outputs = [];
-
+	axios  = axios.create();
 	async init(config) {
 		this.config = config   
 		this.updateStatus('Connecting')
@@ -15,6 +15,8 @@ class BoxInstance extends InstanceBase {
 		this.updateFeedbacks()
 		this.getStatus();
 		this.updatePresets();
+		this.setupAxios();
+		
 	}
 
 	// When module gets deleted
@@ -25,7 +27,10 @@ class BoxInstance extends InstanceBase {
 	async configUpdated(config) {
 		this.config = config
 		//check if we get a response 
+		this.updateFeedbacks()
 		this.getStatus();
+		this.updatePresets();
+		this.setupAxios();
 	}
 
 	// Return config fields for web config
@@ -37,7 +42,27 @@ class BoxInstance extends InstanceBase {
 				label: 'Target IP',
 				width: 8,
 				regex: Regex.IP,
-			}
+			},
+			{
+				type: 'checkbox',
+				id: 'useAuth',
+				label: 'Use Authentication',
+				width: 4,
+				default: false,
+			},
+			{
+				type: 'textinput',
+				id: 'username',
+				label: 'Username',
+				width: 8,
+			},
+			{
+				type: 'textinput',
+				id: 'password',
+				label: 'Password',
+				width: 8,
+				visible: this.config.useAuth,
+			},
 		]
 	}
 
@@ -105,7 +130,7 @@ class BoxInstance extends InstanceBase {
 	async updatePresets() {
 		let presets = [];
 		let url = `http://${this.config.ip}/netio.json`;
-		let response = await axios.get(url).catch(error => {
+		let response = await this.axios.get(url).catch(error => {
 			this.log('error', error.message)
 		} );
 		this.outputs = response.data.Outputs;
@@ -163,16 +188,27 @@ class BoxInstance extends InstanceBase {
 		
 		this.setPresetDefinitions(presets);
 	}
-
+	setupAxios(){
+		if(this.config.useAuth){
+		this.axios = axios.create({
+			auth: {
+				username: this.config.username,
+				password: this.config.password
+			}
+		})	;
+	} else {
+		this.axios = axios.create();
+	}
+	}
 	async getStatus() {
 		let url = `http://${this.config.ip}/netio.json`;
-		let response = await axios.get(url).catch(error => {
+		let response = await this.axios.get(url).catch(error => {
 			this.log('error', error.message);
 			this.updateStatus(InstanceStatus.ConnectionFailure,error.message)
 			return;
 		});
 		this.updateStatus(InstanceStatus.Ok);
-		console.log(response.data.Outputs);
+		//console.log(response.data.Outputs);
 		this.outputs = response.data.Outputs;
 		this.checkFeedbacks('outputs'); 
 	}
@@ -191,7 +227,9 @@ class BoxInstance extends InstanceBase {
 			this.updateStatus(InstanceStatus.UnknownError, error.message);
 		}
 		if (this.outputs.find(element => element.ID.toString() == output)) {
-			let response = await axios.post(url, body).catch(error => {
+			//config
+			
+			let response = await this.axios.post(url, body).catch(error => {
 				this.log('error', error.message)} );
 		}
 		else {
