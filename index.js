@@ -55,13 +55,14 @@ class BoxInstance extends InstanceBase {
 				id: 'username',
 				label: 'Username',
 				width: 8,
+				isVisible : ((options, data) => options.useAuth),
 			},
 			{
 				type: 'textinput',
 				id: 'password',
 				label: 'Password',
 				width: 8,
-				visible: this.config.useAuth,
+				isVisible : ((options, data) => options.useAuth),
 			},
 		]
 	}
