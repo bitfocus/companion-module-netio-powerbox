@@ -11,11 +11,10 @@ class BoxInstance extends InstanceBase {
 		this.config = config   
 		this.updateStatus('Connecting')
 
-		this.updateActions() // export actions
+		this.updateActions() 
 		this.updateFeedbacks()
 		this.getStatus();
 		this.updatePresets();
-		this.updateStatus(InstanceStatus.Ok);
 	}
 
 	// When module gets deleted
@@ -25,6 +24,8 @@ class BoxInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
+		//check if we get a response 
+		this.getStatus();
 	}
 
 	// Return config fields for web config
@@ -168,8 +169,10 @@ class BoxInstance extends InstanceBase {
 		let response = await axios.get(url).catch(error => {
 			this.log('error', error.message);
 			this.updateStatus(InstanceStatus.ConnectionFailure,error.message)
+			return;
 		});
-
+		this.updateStatus(InstanceStatus.Ok);
+		console.log(response.data.Outputs);
 		this.outputs = response.data.Outputs;
 		this.checkFeedbacks('outputs'); 
 	}
@@ -184,6 +187,7 @@ class BoxInstance extends InstanceBase {
 		}
 		catch (error) {
 			this.log('error', error.message);
+			console.log(error);
 			this.updateStatus(InstanceStatus.UnknownError, error.message);
 		}
 		if (this.outputs.find(element => element.ID.toString() == output)) {
