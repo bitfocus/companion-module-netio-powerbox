@@ -8,31 +8,68 @@ class BoxInstance extends InstanceBase {
 	outputs = [];
 	axios  = axios.create();
 	async init(config) {
-		this.config = config   
-		this.updateStatus('Connecting')
-
-		this.updateActions() 
-		this.updateFeedbacks()
-		this.getStatus();
-		this.updatePresets();
-		this.setupAxios();
+		this.handleUpdateConfig(config)
+		
 		
 	}
-
+	async checkBox() {
+		let action = "read";
+		let read = false;
+		let write = false;
+		console.log("checking BOX")
+		let url = `http://${this.config.ip}/netio.json`;
+		try{
+			
+		let response = await this.axios.get(url)
+		//check if we get a response
+		if(response.data.Outputs!= undefined){
+			read = true;
+		}else{
+			this.updateStatus(InstanceStatus.ConnectionFailure,"No response from the BOX, check IP")
+		}
+		action = "write";
+		let body = {Outputs:response.data.Outputs};
+		//check if we can write 
+		let write = await this.axios.post(url, body)
+		//check if we get a response
+		//console.log(write.data)
+		write = true;
+		return read && write;
+		}catch(error){
+			//console.log("error",error)
+			//check if conection refused
+			if(error.code == 'ECONNREFUSED'){
+				this.updateStatus(InstanceStatus.ConnectionFailure,"Error during"+action+ " Connection Refused check IP")
+			}
+			//check if  unauthorized
+			else if( error.response != undefined && error.response.status == 401){
+				this.updateStatus(InstanceStatus.ConnectionFailure,"Error during"+action+ " Unauthorized, enable Auth in the config")
+			}
+			else{
+				this.updateStatus(InstanceStatus.ConnectionFailure,"Error during "+action+ " "+error.message)
+				console.log("error",error)
+			}
+		}
+		
+	}
 	// When module gets deleted
 	async destroy() {
 		this.log('debug', 'destroy')
 	}
-
-	async configUpdated(config) {
-		this.config = config
-		//check if we get a response 
+	async handleUpdateConfig(config) {
+		this.config = config   
+		this.setupAxios();
+		this.updateStatus('Connecting')
+		if(await this.checkBox() == true){
+		this.updateActions() 
 		this.updateFeedbacks()
 		this.getStatus();
 		this.updatePresets();
-		this.setupAxios();
+		};
 	}
-
+	async configUpdated(config) {
+		this.handleUpdateConfig(config)
+	}
 	// Return config fields for web config
 	getConfigFields() {
 		return [
@@ -195,7 +232,9 @@ class BoxInstance extends InstanceBase {
 			auth: {
 				username: this.config.username,
 				password: this.config.password
-			}
+			},
+			maxContentLength: 50 * 1024 * 1024, // 50 MB
+  			maxBodyLength: 50 * 1024 * 1024, // 50 MB
 		})	;
 	} else {
 		this.axios = axios.create();
@@ -209,7 +248,6 @@ class BoxInstance extends InstanceBase {
 			return;
 		});
 		this.updateStatus(InstanceStatus.Ok);
-		//console.log(response.data.Outputs);
 		this.outputs = response.data.Outputs;
 		this.checkFeedbacks('outputs'); 
 	}
