@@ -8,7 +8,7 @@ class BoxInstance extends InstanceBase {
 	outputs = [];
 	axios  = axios.create();
 	async init(config) {
-		this.handleUpdateConfig(config)
+		await this.handleUpdateConfig(config)
 		
 		
 	}
@@ -59,7 +59,7 @@ class BoxInstance extends InstanceBase {
 	async handleUpdateConfig(config) {
 		this.config = config   
 		this.setupAxios();
-		this.updateStatus('Connecting')
+		this.updateStatus(InstanceStatus.Connecting)
 		if(await this.checkBox() == true){
 		this.updateActions() 
 		this.updateFeedbacks()
@@ -68,7 +68,7 @@ class BoxInstance extends InstanceBase {
 		};
 	}
 	async configUpdated(config) {
-		this.handleUpdateConfig(config)
+		await this.handleUpdateConfig(config)
 	}
 	// Return config fields for web config
 	getConfigFields() {
