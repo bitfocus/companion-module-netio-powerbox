@@ -1,5 +1,8 @@
-
-DEBUG-PACKAGED
 node_modules/
-pkg/
-pkg.tgz
+package-lock.json
+/pkg
+/*.tgz
+/dist
+DEBUG-*
+/.yarn
+/.vscode

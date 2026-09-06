@@ -1,9 +1,11 @@
 {
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
 	"id": "netio-powerbox",
 	"name": "netio-powerbox",
 	"shortname": "PowerBOX",
-	"description": "netio-powerbox",
-	"version": "0.0.0",
+	"description": "Control and monitor NETIO smart power sockets over the JSON M2M API",
+	"version": "3.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-netio-powerbox.git",
 	"bugs": "https://github.com/bitfocus/companion-module-netio-powerbox/issues",
@@ -11,21 +13,30 @@
 		{
 			"name": "Jeffrey Davidsz",
 			"email": "jeffrey.davidsz@vicreo.eu"
+		},
+		{
+			"name": "A.J. Kaptijn",
+			"email": "github@ajkaptijn.nl"
 		}
 	],
-	"legacyIds": [],
 	"runtime": {
-		"type": "node18",
+		"type": "node22",
 		"api": "nodejs-ipc",
 		"apiVersion": "0.0.0",
-		"entrypoint": "..\\index.js"
+		"entrypoint": "../dist/main.js"
 	},
+	"legacyIds": [],
 	"manufacturer": "NETIO",
 	"products": [
-		"PowerBOX"
+		"PowerBOX 3Px",
+		"PowerBOX 4Kx",
+		"PowerPDU 4C",
+		"PowerPDU 4PS",
+		"PowerPDU 8QS",
+		"PowerCable REST",
+		"PowerDIN 4PZ",
+		"NETIO 4",
+		"NETIO 4All"
 	],
-	"keywords": [
-		"Power",
-		"Electric"
-	]
+	"keywords": ["power", "electric", "pdu", "socket", "outlet", "energy"]
 }
